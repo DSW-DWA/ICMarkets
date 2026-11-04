@@ -46,7 +46,7 @@ Networks: `EthereumMainnet`, `DashMainnet`, `BitcoinMainnet`, `BitcoinTestnet3`,
 
 ## How it works
 
-The API fetches BlockCypher JSON and stores it with its network in SQLite. A background worker collects all networks at startup and every five minutes by default. Collection interval and startup behavior are configurable. Upstream calls use retries, timeouts, and a circuit breaker. Logs go to console and a rolling file.
+The API fetches BlockCypher data and stores it with its network in SQLite. A background worker collects all networks at startup and every five minutes by default; collection interval and startup behavior are configurable. You can also start collection manually: use `POST /api/blockchains/collect` for all networks or `POST /api/blockchains/{network}/collect` for one network. Upstream calls use retries, timeouts, and a circuit breaker. Logs go to console and a rolling file.
 
 ## Configuration
 
