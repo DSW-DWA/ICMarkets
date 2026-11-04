@@ -19,8 +19,7 @@ public sealed class InitialCreate : Migration
                 Id = table.Column<long>(type: "INTEGER", nullable: false)
                     .Annotation("Sqlite:Autoincrement", true),
                 CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
-                Network = table.Column<BlockchainNetwork>(type: "TEXT", maxLength: 32, nullable: false)
-                    .Annotation("Relational:ColumnType", "TEXT"),
+                Network = table.Column<string>(type: "TEXT", maxLength: 32, nullable: false),
                 DataJson = table.Column<string>(type: "TEXT", nullable: false)
             },
             constraints: table => table.PrimaryKey("PK_Snapshots", x => x.Id));
