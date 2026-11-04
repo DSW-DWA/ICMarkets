@@ -1,10 +1,9 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using ICMarkets.Api.Domain;
 
 namespace ICMarkets.Api.Contracts;
 
-public sealed record SnapshotResponse(long Id, BlockchainNetwork Network, DateTimeOffset CreatedAt, JsonElement Data);
+public sealed record SnapshotResponse(long Id, BlockchainNetwork Network, DateTimeOffset CreatedAt, BlockchainData Data);
 
 public sealed record NetworkCollectionResponse(
     BlockchainNetwork Network,
@@ -39,11 +38,10 @@ public static class SnapshotMapping
 {
     public static SnapshotResponse ToResponse(this BlockchainSnapshot snapshot)
     {
-        using var document = JsonDocument.Parse(snapshot.ResponseJson);
         return new(
             snapshot.Id,
             snapshot.Network,
             new DateTimeOffset(DateTime.SpecifyKind(snapshot.CreatedAt, DateTimeKind.Utc)),
-            document.RootElement.Clone());
+            snapshot.Data);
     }
 }

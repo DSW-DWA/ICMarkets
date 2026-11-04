@@ -15,8 +15,11 @@ public interface IUnitOfWork
 
 public interface IBlockCypherClient
 {
-    Task<string> GetLatestBlockAsync(BlockchainNetwork network, CancellationToken cancellationToken);
+    Task<BlockchainData> GetLatestBlockAsync(BlockchainNetwork network, CancellationToken cancellationToken);
 }
+
+public sealed class InvalidUpstreamResponseException(string message, Exception? innerException = null)
+    : Exception(message, innerException);
 
 public interface IBlockchainService
 {

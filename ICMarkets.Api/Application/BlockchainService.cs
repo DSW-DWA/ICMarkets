@@ -1,4 +1,3 @@
-using System.Text.Json;
 using ICMarkets.Api.Domain;
 
 namespace ICMarkets.Api.Application;
@@ -13,8 +12,8 @@ public sealed class BlockchainService(
     public async Task<BlockchainSnapshot> CollectAsync(BlockchainNetwork network, CancellationToken cancellationToken)
     {
         var requestedAt = timeProvider.GetUtcNow();
-        var json = await client.GetLatestBlockAsync(network, cancellationToken);
-        var snapshot = new BlockchainSnapshot(network, json, requestedAt);
+        var data = await client.GetLatestBlockAsync(network, cancellationToken);
+        var snapshot = new BlockchainSnapshot(network, data, requestedAt);
         await repository.AddAsync(snapshot, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return snapshot;
@@ -46,9 +45,8 @@ public sealed class BlockchainService(
         var requestedAt = timeProvider.GetUtcNow();
         try
         {
-            var json = await client.GetLatestBlockAsync(network, cancellationToken);
-            using (JsonDocument.Parse(json)) { }
-            return new BlockchainCollectionOutcome(network, new BlockchainSnapshot(network, json, requestedAt), null);
+            var data = await client.GetLatestBlockAsync(network, cancellationToken);
+            return new BlockchainCollectionOutcome(network, new BlockchainSnapshot(network, data, requestedAt), null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

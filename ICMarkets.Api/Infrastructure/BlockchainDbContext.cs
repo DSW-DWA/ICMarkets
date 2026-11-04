@@ -1,6 +1,8 @@
 using ICMarkets.Api.Application;
 using ICMarkets.Api.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using System.Text.Json;
 
 namespace ICMarkets.Api.Infrastructure;
 
@@ -13,7 +15,10 @@ public sealed class BlockchainDbContext(DbContextOptions<BlockchainDbContext> op
         var entity = modelBuilder.Entity<BlockchainSnapshot>();
         entity.HasKey(x => x.Id);
         entity.Property(x => x.Network).HasConversion<string>().HasMaxLength(32).IsRequired();
-        entity.Property(x => x.ResponseJson).IsRequired();
+        var dataConverter = new ValueConverter<BlockchainData, string>(
+            data => JsonSerializer.Serialize(data, (JsonSerializerOptions?)null),
+            json => JsonSerializer.Deserialize<BlockchainData>(json, (JsonSerializerOptions?)null) ?? new BlockchainData());
+        entity.Property(x => x.Data).HasConversion(dataConverter).HasColumnName("DataJson").IsRequired();
         entity.Property(x => x.CreatedAt).IsRequired();
         entity.HasIndex(x => new { x.Network, x.CreatedAt });
     }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics;
+using ICMarkets.Api.Application;
 
 namespace ICMarkets.Api.Infrastructure;
 
@@ -19,6 +20,10 @@ public sealed class BlockCypherExceptionHandler : IExceptionHandler
                 Status: StatusCodes.Status502BadGateway,
                 Title: "BlockCypher request failed",
                 Detail: "The upstream blockchain service request failed."),
+            InvalidUpstreamResponseException => (
+                Status: StatusCodes.Status502BadGateway,
+                Title: "BlockCypher returned an invalid response",
+                Detail: "The upstream blockchain service returned data in an unexpected format."),
             Polly.CircuitBreaker.BrokenCircuitException => (
                 Status: StatusCodes.Status503ServiceUnavailable,
                 Title: "BlockCypher is temporarily unavailable",
