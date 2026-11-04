@@ -12,8 +12,8 @@ public sealed class BlockchainServiceTests
     {
         var failedNetwork = BlockchainNetwork.BitcoinTestnet3;
         var client = new FakeBlockCypherClient((network, _) => network == failedNetwork
-            ? Task.FromException<string>(new HttpRequestException("upstream failed"))
-            : Task.FromResult("{\"height\":123}"));
+            ? Task.FromException<BlockchainData>(new HttpRequestException("upstream failed"))
+            : Task.FromResult(new BlockchainData { Height = 123 }));
         var repository = new FakeRepository();
         var unitOfWork = new FakeUnitOfWork();
         var service = CreateService(client, repository, unitOfWork);
@@ -35,7 +35,7 @@ public sealed class BlockchainServiceTests
     public async Task CollectAllAsync_AllNetworksFail_DoesNotCallSaveChanges()
     {
         var client = new FakeBlockCypherClient((_, _) =>
-            Task.FromException<string>(new HttpRequestException("upstream failed")));
+            Task.FromException<BlockchainData>(new HttpRequestException("upstream failed")));
         var repository = new FakeRepository();
         var unitOfWork = new FakeUnitOfWork();
         var service = CreateService(client, repository, unitOfWork);
@@ -51,8 +51,10 @@ public sealed class BlockchainServiceTests
     public async Task CollectAllAsync_InvalidJson_FailsOnlyThatNetwork()
     {
         var failedNetwork = BlockchainNetwork.DashMainnet;
-        var client = new FakeBlockCypherClient((network, _) => Task.FromResult(
-            network == failedNetwork ? "not-json" : "{\"height\":123}"));
+        var client = new FakeBlockCypherClient((network, _) =>
+            network == failedNetwork
+                ? Task.FromException<BlockchainData>(new InvalidUpstreamResponseException("invalid json"))
+                : Task.FromResult(new BlockchainData { Height = 123 }));
         var repository = new FakeRepository();
         var unitOfWork = new FakeUnitOfWork();
         var service = CreateService(client, repository, unitOfWork);
@@ -71,7 +73,7 @@ public sealed class BlockchainServiceTests
         var client = new FakeBlockCypherClient((_, token) =>
         {
             cancellation.Cancel();
-            return Task.FromCanceled<string>(token);
+            return Task.FromCanceled<BlockchainData>(token);
         });
         var repository = new FakeRepository();
         var unitOfWork = new FakeUnitOfWork();
@@ -90,9 +92,9 @@ public sealed class BlockchainServiceTests
         new(client, repository, unitOfWork, new IncrementingTimeProvider(), NullLogger<BlockchainService>.Instance);
 
     private sealed class FakeBlockCypherClient(
-        Func<BlockchainNetwork, CancellationToken, Task<string>> getLatestBlock) : IBlockCypherClient
+        Func<BlockchainNetwork, CancellationToken, Task<BlockchainData>> getLatestBlock) : IBlockCypherClient
     {
-        public Task<string> GetLatestBlockAsync(BlockchainNetwork network, CancellationToken cancellationToken) =>
+        public Task<BlockchainData> GetLatestBlockAsync(BlockchainNetwork network, CancellationToken cancellationToken) =>
             getLatestBlock(network, cancellationToken);
     }
 

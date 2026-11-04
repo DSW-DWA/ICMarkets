@@ -21,8 +21,15 @@ public sealed class BlockchainPersistenceTests
         var repository = new BlockchainSnapshotRepository(db);
         var service = new BlockchainService(
             new FakeBlockCypherClient((network, _) => network == failedNetwork
-                ? Task.FromException<string>(new HttpRequestException("upstream failed"))
-                : Task.FromResult("{\"height\":123}")),
+                ? Task.FromException<BlockchainData>(new HttpRequestException("upstream failed"))
+                : Task.FromResult(new BlockchainData
+                {
+                    Height = 123,
+                    AdditionalData = new Dictionary<string, System.Text.Json.JsonElement>
+                    {
+                        ["chain_specific"] = System.Text.Json.JsonDocument.Parse("\"value\"").RootElement.Clone()
+                    }
+                })),
             repository,
             db,
             new FixedTimeProvider(new DateTimeOffset(2026, 11, 4, 0, 0, 0, TimeSpan.Zero)),
@@ -39,7 +46,8 @@ public sealed class BlockchainPersistenceTests
         Assert.Equal(Enum.GetValues<BlockchainNetwork>().Length - 1, outcomes.Count(outcome => outcome.Succeeded));
         Assert.Single(outcomes, outcome => !outcome.Succeeded);
         Assert.Single(history);
-        Assert.Equal("{\"height\":123}", history[0].ResponseJson);
+        Assert.Equal(123, history[0].Data.Height);
+        Assert.Equal("value", history[0].Data.AdditionalData!["chain_specific"].GetString());
     }
 
     [Fact]
@@ -52,10 +60,10 @@ public sealed class BlockchainPersistenceTests
         var from = new DateTimeOffset(2026, 11, 1, 0, 0, 0, TimeSpan.Zero);
         var to = new DateTimeOffset(2026, 11, 4, 0, 0, 0, TimeSpan.Zero);
 
-        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.BitcoinMainnet, "{\"height\":1}", from), CancellationToken.None);
-        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.BitcoinMainnet, "{\"height\":2}", from.AddDays(1)), CancellationToken.None);
-        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.BitcoinMainnet, "{\"height\":4}", to), CancellationToken.None);
-        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.DashMainnet, "{\"height\":3}", from.AddDays(2)), CancellationToken.None);
+        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.BitcoinMainnet, new BlockchainData { Height = 1 }, from), CancellationToken.None);
+        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.BitcoinMainnet, new BlockchainData { Height = 2 }, from.AddDays(1)), CancellationToken.None);
+        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.BitcoinMainnet, new BlockchainData { Height = 4 }, to), CancellationToken.None);
+        await repository.AddAsync(new BlockchainSnapshot(BlockchainNetwork.DashMainnet, new BlockchainData { Height = 3 }, from.AddDays(2)), CancellationToken.None);
         await db.SaveChangesAsync();
 
         var history = await repository.GetHistoryAsync(
@@ -65,7 +73,7 @@ public sealed class BlockchainPersistenceTests
             10,
             CancellationToken.None);
 
-        Assert.Equal(new[] { "{\"height\":2}", "{\"height\":1}" }, history.Select(snapshot => snapshot.ResponseJson));
+        Assert.Equal(new long?[] { 2, 1 }, history.Select(snapshot => snapshot.Data.Height));
     }
 
     private static async Task<SqliteConnection> OpenDatabaseAsync()
@@ -84,9 +92,9 @@ public sealed class BlockchainPersistenceTests
     }
 
     private sealed class FakeBlockCypherClient(
-        Func<BlockchainNetwork, CancellationToken, Task<string>> getLatestBlock) : IBlockCypherClient
+        Func<BlockchainNetwork, CancellationToken, Task<BlockchainData>> getLatestBlock) : IBlockCypherClient
     {
-        public Task<string> GetLatestBlockAsync(BlockchainNetwork network, CancellationToken cancellationToken) =>
+        public Task<BlockchainData> GetLatestBlockAsync(BlockchainNetwork network, CancellationToken cancellationToken) =>
             getLatestBlock(network, cancellationToken);
     }
 
