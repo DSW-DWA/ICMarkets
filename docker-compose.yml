@@ -1,0 +1,16 @@
+services:
+  icmarkets-api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      ConnectionStrings__Blockchain: "Data Source=/data/blockchain.db"
+      Serilog__WriteTo__1__Args__path: "/logs/icmarkets-.log"
+    volumes:
+      - blockchain-data:/data
+      - blockchain-logs:/logs
+      - ./ICMarkets.Api/appsettings.json:/app/appsettings.json:ro
+
+volumes:
+  blockchain-data:
+  blockchain-logs:
